@@ -1,0 +1,24 @@
+services:
+  controlplane:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    container_name: controlplane
+    platform: linux/amd64  # Required for Apple Silicon Macs
+    ports:
+      - "7007:7007"
+    volumes:
+      - ./app-config.yaml:/app/app-config.yaml
+      - ./app-config.local.yaml:/app/app-config.local.yaml
+      - ./app-config.production.yaml:/app/app-config.production.yaml
+
+    command:
+      - "node"
+      - "packages/backend"
+      - "--config"
+      - "app-config.yaml"
+
+    environment:
+      NODE_ENV: development
+      GITLAB_TOKEN: ${GITLAB_API_TOKEN}
+    restart: unless-stopped

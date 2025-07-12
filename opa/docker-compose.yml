@@ -1,0 +1,18 @@
+services:
+  opa:
+    image: openpolicyagent/opa:latest
+    platform: linux/amd64
+    container_name: opa
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./policies:/policies
+    command:
+      - "run"
+      - "--server"
+      - "--log-level"
+      - "debug"
+      - "--addr"
+      - "0.0.0.0:8181"
+      - "/policies"
+    restart: unless-stopped
