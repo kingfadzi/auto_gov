@@ -21,6 +21,12 @@ backend:
     connect-src: ["'self'", 'http:', 'https:']
     # Content-Security-Policy directives follow the Helmet format: https://helmetjs.github.io/#reference
     # Default Helmet Content-Security-Policy values can be removed by setting the key to false
+    img-src:
+      # "'self'" and 'data' are from the backstage default but must be set since img-src is overriden
+      - "'self'"
+      - 'data:'
+      # Allow your Jira instance for @roadiehq/backstage-plugin-jira
+      - 'http://helios.butterflycluster.com:8080'
   cors:
     origin: http://localhost:3000
     methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
@@ -50,6 +56,29 @@ integrations:
     #   token: ${GHE_TOKEN}
 
 proxy:
+  '/jira/api':
+    target: 'http://helios.butterflycluster.com:8080'
+    changeOrigin: true
+    credentials: 'dangerously-allow-unauthenticated'
+    pathRewrite:
+      '^/api/proxy/jira/api(.*?)(/jql)?$': '$1'
+    headers:
+      Authorization: 'Bearer <>'
+      Accept: 'application/json'
+      Content-Type: 'application/json'
+      X-Atlassian-Token: 'nocheck'
+      User-Agent: 'controlplane'
+    allowedHeaders:
+      - 'Authorization'
+      - 'Accept'
+      - 'Content-Type'
+      - 'X-Atlassian-Token'
+      - 'User-Agent'
+
+
+
+
+
   ### Example for how to add a proxy endpoint for the frontend.
   ### A typical reason to do this is to handle HTTPS and CORS for internal services.
   # endpoints:

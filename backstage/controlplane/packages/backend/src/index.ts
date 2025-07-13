@@ -12,9 +12,13 @@ import {
     catalogPluginGitlabFillerProcessorModule,
 } from '@immobiliarelabs/backstage-plugin-gitlab-backend';
 
+
 const backend = createBackend();
 
+
 backend.add(import('@backstage/plugin-app-backend'));
+
+
 backend.add(import('@backstage/plugin-proxy-backend'));
 backend.add(import('@backstage/plugin-scaffolder-backend'));
 backend.add(import('@backstage/plugin-scaffolder-backend-module-github'));
@@ -58,5 +62,6 @@ backend.add(import('@backstage/plugin-kubernetes-backend'));
 
 backend.add(gitlabPlugin);
 backend.add(catalogPluginGitlabFillerProcessorModule);
+
 
 backend.start();

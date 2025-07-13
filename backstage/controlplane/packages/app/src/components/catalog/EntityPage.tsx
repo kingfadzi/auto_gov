@@ -71,6 +71,8 @@ import {
     EntityGitlabReleasesCard,
 } from '@immobiliarelabs/backstage-plugin-gitlab';
 
+import { EntityJiraOverviewCard, EntityJiraQueryCard, isJiraAvailable, hasJiraQuery } from '@roadiehq/backstage-plugin-jira';
+
 
 const techdocsContent = (
   <EntityTechdocsContent>
@@ -150,6 +152,17 @@ const GitlabDebug = () => {
     );
 };
 
+const JiraDebug = () => {
+    const { entity } = useEntity();
+    const available = isJiraAvailable(entity);
+    console.log('isJiraAvailable:', available, 'entity:', entity);
+    return (
+        <div style={{ color: available ? 'green' : 'red', fontWeight: 'bold' }}>
+            Jira Available: {available ? 'Yes' : 'No'}
+        </div>
+    );
+};
+
 const overviewContent = (
 
   <Grid container spacing={3} alignItems="stretch">
@@ -157,6 +170,7 @@ const overviewContent = (
 
       <Grid item xs={12}>
           <GitlabDebug />
+          <JiraDebug />
       </Grid>
 
     <Grid item md={6}>
@@ -199,6 +213,20 @@ const overviewContent = (
           </EntitySwitch.Case>
       </EntitySwitch>
 
+      <EntitySwitch>
+          <EntitySwitch.Case if={isJiraAvailable}>
+              <Grid item md={6}>
+                  <EntityJiraOverviewCard />
+              </Grid>
+          </EntitySwitch.Case>
+          <EntitySwitch.Case if={hasJiraQuery}>
+              <Grid item md={6}>
+                  {/* This card can be used as an alternative or in addition to the overview card */}
+                   <EntityJiraQueryCard title="Our Custom Query" />
+              </Grid>
+          </EntitySwitch.Case>
+      </EntitySwitch>
+
   </Grid>
 
 
@@ -222,6 +250,15 @@ const serviceEntityPage = (
       >
           <EntityGitlabContent />
       </EntityLayout.Route>
+
+      <EntityLayout.Route
+          path="/jira"
+          title="Jira"
+          if={isJiraAvailable}
+      >
+          <EntityJiraOverviewCard />
+      </EntityLayout.Route>
+
 
 
     <EntityLayout.Route

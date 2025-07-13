@@ -21,4 +21,6 @@ services:
     environment:
       NODE_ENV: development
       GITLAB_TOKEN: ${GITLAB_API_TOKEN}
+      JIRA_TOKEN: ${JIRA_TOKEN}
+      LOG_LEVEL: debug
     restart: unless-stopped
