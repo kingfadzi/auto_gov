@@ -63,7 +63,7 @@ proxy:
     pathRewrite:
       '^/api/proxy/jira/api(.*?)(/jql)?$': '$1'
     headers:
-      Authorization: 'Bearer <>'
+      Authorization: 'Bearer ${JIRA_TOKEN}'
       Accept: 'application/json'
       Content-Type: 'application/json'
       X-Atlassian-Token: 'nocheck'

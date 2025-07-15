@@ -23,4 +23,6 @@ services:
       GITLAB_TOKEN: ${GITLAB_API_TOKEN}
       JIRA_TOKEN: ${JIRA_TOKEN}
       LOG_LEVEL: debug
+    env_file:
+      - .env
     restart: unless-stopped
