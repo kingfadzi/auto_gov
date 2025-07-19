@@ -2,65 +2,53 @@ package pipeline
 
 default allow = false
 
-allow if count(deny_reason) == 0
-
-deny_reason[x] {
-    some x
-    input.stage == "validate"
-    (not input.metadata.jira_ticket.validated) == true
-    x := "Jira ticket validation failed"
+allow {
+    count(deny_reason) == 0
 }
 
-deny_reason[x] {
-    some x
+# -- DENY RULES (partial sets with predicates only)
+deny_reason["Jira ticket validation failed"] {
+    input.stage == "validate"
+    not input.metadata.jira_ticket.validated
+}
+
+deny_reason["unit tests did not pass"] {
     input.stage == "test"
     not input.metadata.unit_tests_passed
-    x := "unit tests did not pass"
 }
 
-deny_reason[x] {
-    some x
+deny_reason["code coverage missing"] {
     input.stage == "test"
     not input.metadata.coverage
-    x := "code coverage missing"
 }
 
-deny_reason[x] {
-    some x
+deny_reason["code coverage too low"] {
     input.stage == "test"
+    input.metadata.coverage
     input.metadata.coverage < 80
-    x := "code coverage too low"
 }
 
-deny_reason[x] {
-    some x
+deny_reason["high severity vulnerabilities present"] {
     input.stage == "build"
-    count(input.metadata.vulns.high) > 0
-    x := "high severity vulnerabilities present"
+    input.metadata.vulns.high
+    input.metadata.vulns.high > 0
 }
 
-deny_reason[x] {
-    some x
+deny_reason["high severity vulnerabilities present"] {
     input.stage == "scan"
-    count(input.metadata.vulns.high) > 0
-    x := "high severity vulnerabilities present"
+    input.metadata.vulns.high
+    input.metadata.vulns.high > 0
 }
 
-deny_reason[x] {
-    some x
+deny_reason["license non-compliance"] {
     not input.metadata.license_compliant
-    x := "license non-compliance"
 }
 
-deny_reason[x] {
-    some x
+deny_reason["Change Request not approved"] {
     input.stage == "approval"
     not input.metadata.change_request.approved
-    x := "Change Request not approved"
 }
 
-deny_reason[x] {
-    some x
+deny_reason["missing metadata block"] {
     not input.metadata
-    x := "missing metadata block"
 }
