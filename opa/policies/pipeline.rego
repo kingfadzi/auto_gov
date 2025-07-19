@@ -1,78 +1,84 @@
 package pipeline
 
-default allow = false
-
-# Known stages
+# Known pipeline stages we want to evaluate
 stages := {"build", "test", "validate", "scan", "approval"}
 
-# Collect all deny reasons across available stage inputs
-deny_reason[reason] if {
-  some s
-  stages[s]
-  input[s]
-  reason := validate(s, input[s])
-  reason != ""
-}
+default allow = false
 
-# Allow if no deny reasons
+# Main decision - allow if no deny reasons found
 allow if {
-  count(deny_reason) == 0
+    count(deny_reason) == 0
 }
 
-# All per-stage validations return a single string ("" if no issue)
-validate(stage, sinput) = msg if {
-  stage == "validate"
-  not sinput.jira_ticket.validated
-  msg := "Jira ticket validation failed"
+# Deny reasons will be collected in this set
+deny_reason contains reason if {
+    some stage
+    stages[stage]
+    input[stage]
+    reason := stage_deny_reason(stage, input[stage])
+    reason != ""
 }
 
-validate(stage, sinput) = msg if {
-  stage == "test"
-  not sinput.unit_tests_passed
-  msg := "unit tests did not pass"
-}
+# Single validation result per stage (avoids conflicts)
+stage_deny_reason(stage, stage_input) := reason if {
+    reason := validate_license(stage_input)
+    reason != ""
+} else := reason if {
+    reason := validate_metadata(stage_input)
+    reason != ""
+} else := reason if {
+    stage == "validate"
+    reason := validate_jira_ticket(stage_input)
+    reason != ""
+} else := reason if {
+    stage == "test"
+    reason := validate_tests(stage_input)
+    reason != ""
+} else := reason if {
+    stage == "test"
+    reason := validate_coverage(stage_input)
+    reason != ""
+} else := reason if {
+    stage == "build"
+    reason := validate_vulns(stage_input)
+    reason != ""
+} else := reason if {
+    stage == "scan"
+    reason := validate_vulns(stage_input)
+    reason != ""
+} else := reason if {
+    stage == "approval"
+    reason := validate_approval(stage_input)
+    reason != ""
+} else := ""
 
-validate(stage, sinput) = msg if {
-  stage == "test"
-  not sinput.coverage
-  msg := "code coverage missing"
-}
+# Individual validation functions
+validate_jira_ticket(stage_input) := "Jira ticket validation failed" if {
+    not stage_input.jira_ticket.validated
+} else := ""
 
-validate(stage, sinput) = msg if {
-  stage == "test"
-  sinput.coverage < 80
-  msg := "code coverage too low"
-}
+validate_tests(stage_input) := "unit tests did not pass" if {
+    not stage_input.unit_tests_passed
+} else := ""
 
-validate(stage, sinput) = msg if {
-  stage == "build"
-  count(sinput.vulns.high) > 0
-  msg := "high severity vulnerabilities present"
-}
+validate_coverage(stage_input) := "code coverage missing" if {
+    not stage_input.coverage
+} else := "code coverage too low" if {
+    stage_input.coverage < 80
+} else := ""
 
-validate(stage, sinput) = msg if {
-  stage == "scan"
-  count(sinput.vulns.high) > 0
-  msg := "high severity vulnerabilities present"
-}
+validate_vulns(stage_input) := "high severity vulnerabilities present" if {
+    count(stage_input.vulns.high) > 0
+} else := ""
 
-validate(stage, sinput) = msg if {
-  stage == "approval"
-  not sinput.change_request.approved
-  msg := "Change Request not approved"
-}
+validate_approval(stage_input) := "Change Request not approved" if {
+    not stage_input.change_request.approved
+} else := ""
 
-validate(stage, sinput) = msg if {
-  not sinput.license_compliant
-  msg := "license non-compliance"
-}
+validate_license(stage_input) := "license non-compliance" if {
+    not stage_input.license_compliant
+} else := ""
 
-validate(stage, sinput) = msg if {
-  not sinput
-  msg := "missing metadata block"
-}
-
-# Fallback for no match — return empty string
-validate(_, _) = "" if {
-  true
-}
+validate_metadata(stage_input) := "missing metadata block" if {
+    not stage_input
+} else := ""
