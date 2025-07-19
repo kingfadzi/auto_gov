@@ -3,9 +3,7 @@ package pipeline
 default allow = false
 
 # Top-level allow
-allow {
-  not deny_reason[_]
-}
+allow if count(deny_reason) == 0
 
 deny_reason[x] if x == "Jira ticket validation failed" {
   input.stage == "validate"
