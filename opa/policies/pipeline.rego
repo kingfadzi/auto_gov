@@ -6,7 +6,8 @@ allow {
     count(deny_reason) == 0
 }
 
-# -- DENY RULES (partial sets with predicates only)
+# --- DENY RULES (partial set with constant keys) ---
+
 deny_reason["Jira ticket validation failed"] {
     input.stage == "validate"
     not input.metadata.jira_ticket.validated
@@ -30,12 +31,14 @@ deny_reason["code coverage too low"] {
 
 deny_reason["high severity vulnerabilities present"] {
     input.stage == "build"
+    input.metadata.vulns
     input.metadata.vulns.high
     input.metadata.vulns.high > 0
 }
 
 deny_reason["high severity vulnerabilities present"] {
     input.stage == "scan"
+    input.metadata.vulns
     input.metadata.vulns.high
     input.metadata.vulns.high > 0
 }
