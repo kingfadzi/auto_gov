@@ -1,7 +1,5 @@
 package pipeline
 
-stages := {"build", "test", "validate", "scan", "approval"}
-
 default allow = false
 
 allow if {
@@ -10,47 +8,45 @@ allow if {
 
 deny_reason contains reason if {
     some stage
-    stages[stage]
     input[stage]
-    reason := stage_deny_reason(stage, input[stage])
+    reason := validate_stage(stage, input[stage])
     reason != ""
 }
 
-stage_deny_reason(stage, stage_input) := reason if {
-    # Check for missing metadata first
-    not stage_input.predicate.metadata
+validate_stage(stage, stage_data) := reason if {
+    # First check if metadata exists
+    not stage_data.metadata
     reason := "missing metadata block"
 } else := reason if {
-    # Stage-specific validations
-    stage == "validate"
-    not stage_input.predicate.metadata.jira_ticket.validated
-    reason := "Jira ticket validation failed"
+    # Build stage validations
+    stage == "build"
+    not stage_data.metadata.license_compliant
+    reason := "license non-compliance"
 } else := reason if {
+    stage == "build"
+    count(stage_data.metadata.vulns.high) > 0
+    reason := "high severity vulnerabilities present"
+} else := reason if {
+    # Test stage validations
     stage == "test"
-    not stage_input.predicate.metadata.unit_tests_passed
+    not stage_data.metadata.unit_tests_passed
     reason := "unit tests did not pass"
 } else := reason if {
     stage == "test"
-    not stage_input.predicate.metadata.coverage
+    not stage_data.metadata.coverage
     reason := "code coverage missing"
 } else := reason if {
     stage == "test"
-    stage_input.predicate.metadata.coverage < 80
+    stage_data.metadata.coverage < 80
     reason := "code coverage too low"
 } else := reason if {
-    stage == "build"
-    count(stage_input.predicate.metadata.vulns.high) > 0
-    reason := "high severity vulnerabilities present"
+    # Validate stage validations
+    stage == "validate"
+    not stage_data.metadata.jira_ticket.validated
+    reason := "Jira ticket validation failed"
 } else := reason if {
-    stage == "scan"
-    count(stage_input.predicate.metadata.vulns.high) > 0
-    reason := "high severity vulnerabilities present"
-} else := reason if {
+    # Approval stage validations
     stage == "approval"
-    not stage_input.predicate.metadata.change_request.approved
+    not stage_data.metadata.change_request.approved
     reason := "Change Request not approved"
-} else := reason if {
-    # License check - now properly scoped to metadata
-    not stage_input.predicate.metadata.license_compliant
-    reason := "license non-compliance"
 } else := ""
