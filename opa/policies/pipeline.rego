@@ -1,11 +1,17 @@
 package pipeline
 
+# Known pipeline stages in sequence
+all_stages := ["validate", "build", "test", "scan", "approval", "deploy"]
+required_stages := {"validate", "build", "test", "scan", "approval"}
+
 default allow = false
 
+# Main decision - allow if no deny reasons found
 allow if {
     count(deny_reason) == 0
 }
 
+# Collect all deny reasons
 deny_reason contains reason if {
     some stage
     input[stage]
@@ -13,12 +19,26 @@ deny_reason contains reason if {
     reason != ""
 }
 
+# Special handling for deploy stage - require all previous stages
+deny_reason contains reason if {
+    input.deploy
+    missing_stage := required_stages[_]
+    not input[missing_stage]
+    reason := sprintf("Missing required stage: %s", [missing_stage])
+}
+
+# Stage validation function
 validate_stage(stage, stage_data) := reason if {
     # First check if metadata exists
     not stage_data.metadata
     reason := "missing metadata block"
 } else := reason if {
-    # Build stage validations
+    # Validate stage
+    stage == "validate"
+    not stage_data.metadata.jira_ticket.validated
+    reason := "Jira ticket validation failed"
+} else := reason if {
+    # Build stage
     stage == "build"
     not stage_data.metadata.license_compliant
     reason := "license non-compliance"
@@ -27,7 +47,7 @@ validate_stage(stage, stage_data) := reason if {
     count(stage_data.metadata.vulns.high) > 0
     reason := "high severity vulnerabilities present"
 } else := reason if {
-    # Test stage validations
+    # Test stage
     stage == "test"
     not stage_data.metadata.unit_tests_passed
     reason := "unit tests did not pass"
@@ -40,12 +60,12 @@ validate_stage(stage, stage_data) := reason if {
     stage_data.metadata.coverage < 80
     reason := "code coverage too low"
 } else := reason if {
-    # Validate stage validations
-    stage == "validate"
-    not stage_data.metadata.jira_ticket.validated
-    reason := "Jira ticket validation failed"
+    # Scan stage
+    stage == "scan"
+    count(stage_data.metadata.vulns.high) > 0
+    reason := "high severity vulnerabilities present"
 } else := reason if {
-    # Approval stage validations
+    # Approval stage
     stage == "approval"
     not stage_data.metadata.change_request.approved
     reason := "Change Request not approved"
