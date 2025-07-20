@@ -5,10 +5,16 @@ all_stages := ["validate", "build", "test", "scan", "approval", "deploy"]
 required_stages := {"validate", "build", "test", "scan", "approval"}
 
 default allow = false
+default is_deploy = false
 
 # Main decision - allow if no deny reasons found
 allow if {
     count(deny_reason) == 0
+}
+
+# Detect if deploy stage is present
+is_deploy if {
+    input.deploy
 }
 
 # Collect all deny reasons
@@ -21,7 +27,7 @@ deny_reason contains reason if {
 
 # Special handling for deploy stage - require all previous stages
 deny_reason contains reason if {
-    input.deploy
+    is_deploy
     missing_stage := required_stages[_]
     not input[missing_stage]
     reason := sprintf("Missing required stage: %s", [missing_stage])
@@ -70,3 +76,10 @@ validate_stage(stage, stage_data) := reason if {
     not stage_data.metadata.change_request.approved
     reason := "Change Request not approved"
 } else := ""
+
+# Final output with is_deploy flag
+result := {
+    "allow": allow,
+    "is_deploy": is_deploy,
+    "deny_reason": deny_reason
+}
